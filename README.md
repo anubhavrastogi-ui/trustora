@@ -28,7 +28,7 @@ npm run test:rules           # the rule tests (no key needed)
 
 Set one key in `.env.local`:
 
-- `OPENROUTER_API_KEY` uses a free model through OpenRouter (default `minimax/minimax-m3.1-flash:free`). Change it with `OPENROUTER_MODEL`. Free models can be slow or rate-limited.
+- `OPENROUTER_API_KEY` uses a free model through OpenRouter (default `nvidia/nemotron-3.5-lightning:free`). Change it with `OPENROUTER_MODEL`. Free models can be slow or rate-limited.
 - `ANTHROPIC_API_KEY` uses Claude directly (default `claude-sonnet-5-5`, change with `ANTHROPIC_MODEL`). If both keys are set, Anthropic is used.
 
 ## Tests

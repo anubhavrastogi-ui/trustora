@@ -7,7 +7,7 @@ import type { Extraction, FormInput } from "./types.ts";
 //  - OPENROUTER_API_KEY set -> a free model through OpenRouter (default).
 const ANTHROPIC_MODEL = "claude-sonnet-5-5";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const OPENROUTER_DEFAULT_MODEL = "minimax/minimax-m3.1-flash:free";
+const OPENROUTER_DEFAULT_MODEL = "nvidia/nemotron-3.5-lightning:free";
 
 export class ConfigError extends Error {}
 export class ExtractError extends Error {}
@@ -98,7 +98,7 @@ async function viaOpenRouter(apiKey: string, form: FormInput): Promise<{ extract
       ],
       tool_choice: { type: "function", function: { name: TOOL.name } },
     }),
-    signal: AbortSignal.timeout(50_000),
+    signal: AbortSignal.timeout(30_000),
   });
 
   const data = (await res.json().catch(() => ({}))) as OpenRouterResponse;
@@ -120,8 +120,30 @@ async function viaOpenRouter(apiKey: string, form: FormInput): Promise<{ extract
   };
 }
 
+// Free models are often busy (429) or return an empty answer. Try again a couple of times,
+// but stop starting new attempts once the request has used about half its time budget.
+const MAX_ATTEMPTS = 3;
+const START_NEW_ATTEMPT_BEFORE_MS = 28_000;
+
 export async function extract(form: FormInput) {
-  if (isSet(process.env.ANTHROPIC_API_KEY)) return viaAnthropic(process.env.ANTHROPIC_API_KEY, form);
-  if (isSet(process.env.OPENROUTER_API_KEY)) return viaOpenRouter(process.env.OPENROUTER_API_KEY, form);
-  throw new ConfigError("No API key found in .env.local (ANTHROPIC_API_KEY or OPENROUTER_API_KEY)");
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  const openRouterKey = process.env.OPENROUTER_API_KEY;
+  if (!isSet(anthropicKey) && !isSet(openRouterKey)) {
+    throw new ConfigError("No API key found in .env.local (ANTHROPIC_API_KEY or OPENROUTER_API_KEY)");
+  }
+
+  const started = Date.now();
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      return isSet(anthropicKey) ? await viaAnthropic(anthropicKey, form) : await viaOpenRouter(openRouterKey as string, form);
+    } catch (err) {
+      lastError = err;
+      if (err instanceof ConfigError) throw err;
+      console.warn(`[extract] attempt ${attempt} failed: ${err instanceof Error ? err.message : err}`);
+      if (Date.now() - started > START_NEW_ATTEMPT_BEFORE_MS) break;
+      await new Promise((r) => setTimeout(r, 800 * attempt));
+    }
+  }
+  throw lastError;
 }

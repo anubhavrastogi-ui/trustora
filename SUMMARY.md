@@ -31,7 +31,7 @@ Trustora gives first-time product founders a green / amber / red trust report on
 
 ## How the model is chosen
 
-`lib/extract.ts` uses `ANTHROPIC_API_KEY` (Claude directly) if set, otherwise `OPENROUTER_API_KEY` with a free model. Default free model: `minimax/minimax-m3.1-flash:free` (override with `OPENROUTER_MODEL`). Free models can be slow or rate-limited, and the free tier allows roughly 50 requests a day.
+`lib/extract.ts` uses `ANTHROPIC_API_KEY` (Claude directly) if set, otherwise `OPENROUTER_API_KEY` with a free model. Default free model: `nvidia/nemotron-3.5-lightning:free` (override with `OPENROUTER_MODEL`). Free models can be slow or rate-limited, and the free tier allows roughly 50 requests a day.
 
 ## Secrets
 
